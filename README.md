@@ -20,7 +20,6 @@ The object detection pipelines work with a [tiny yolo v4](git@github.com:l3p-cv/
     * [install Triton Inference Server](https://github.com/triton-inference-server/server.git)
     * create a [model repository](https://github.com/triton-inference-server/server/blob/main/docs/getting_started/quickstart.md)
     * structure the [model repository](https://github.com/triton-inference-server/server/blob/main/docs/user_guide/model_repository.md)
-
     Example of a Tensorflow model repository structure:
     ```
     model_repository
@@ -107,7 +106,7 @@ The model is trainable in a loop with the tiny_yolo_triton_sia_loop pipeline.
 ## tiny_yolo_triton_sia_loop
 ### Description
 Request single image annotations with model object detection proposals for all images of a specified data source.
-This Pipeline runs in a loop. At the first iteration the images will be annotated manual. Use this annotation data to [train](git@github.com:l3p-cv/lost_yolov3_tf2.git) the model
+This Pipeline runs in a loop. At the first iteration the images will be annotated manual. Use this annotation data to [train](https://github.com/l3p-cv/lost_ootb_pipes) the model
 for next iteration. The number of loops is pending on the number of images in the datasource and the image batch size per loop.
 
 Supported is **tiny yolo v4 Tensorflow** model.
