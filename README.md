@@ -9,7 +9,7 @@ and Triton Inference Server (https://github.com/triton-inference-server)
 Pipelines for semi automatic annotation.
 To get faster annotation data these pipelines use pretrained models for classification or object detection  proposals.
 It is possible to train a model in a loop or if there is a trained model for your data you can generate new annotations.
-The object detection pipelines work with a [tiny yolo v4](git@github.com:l3p-cv/lost_yolov3_tf2.git) Tensorflow model.
+The object detection pipelines work with a [tiny yolo v4](https://github.com/l3p-cv/lost_ootb_pipes) Tensorflow model.
 
 ## Installation
 1. Import Pipelines
@@ -54,7 +54,20 @@ The object detection pipelines work with a [tiny yolo v4](git@github.com:l3p-cv/
 
     ```
     * The directory named by numbers presents the model version. In default settings the pipeline will use the newest version.
-    * labels.txt represents the dictionary for the annotation classes. It has to fit to the loaded model.
+    * model_classes.txt represents the dictionary for the annotation classes. It has to fit to the loaded model.
+
+## Options in Annotaion task
+1. Info
+    * Enter name and instructions for annotators.
+2. Annotators
+    * Choose annotators from a list for the task.
+3. Label tree
+    * Choose the label tree from a list for the task
+4. Labels
+    * Choose complete label tree or sub tree by clicking the knot
+5. Configuration
+    * configure the available options for the task
+
 
 ## request_triton_mia
 ### Description
@@ -65,20 +78,40 @@ Request multi image annotations with a Tensorflow model classification proposals
     * Add the model_classes.txt (model classes have to fit to your model).
     * It is possible to config specific settings by your own in the config.pbtxt (for example load all model versions: version_policy: { all: {}}) 
 
-2. start and configure the pipeline
-    * start the pipeline request_triton_mia
-    * choose your image data directory in datasource
-    * at the script block, click on "arguments available" and configure them
+2. Setup and configure the pipeline
+    * start the pipeline tiny_yolo_triton_sia
+
+        ![tiny_yolo_pipeline](Images/request_triton_mia_pipe.png)
+
+    * datasource block: choose your image data directory
+    * script block: click on "arguments available" and configure them
         * model_name: Enter the name of your model. It is the name of the directory in your model repository, see structure example above.
         * model_version: Enter the model version. The default is newest version
         * batch_size: Size of the image batch for model input. The maximum depends on the model.
         * url: Enter the url of the Triton Inference Server
         * port: Enter the port of the Triton Inference Server (at the moment only 8000 for http request is possible)
+    * annotation task block: [Edit](#options-in-annotaion-task) options
+    * Info
+        * Enter a pipeline name and description
+    * Complete
+        * click on start pipe
+3. Annotate
+    * go to annotation menu
+    * annotate the task
+4. Data export
+    * go to pipelines
+    * open the pipeline
+    * annotation task block:
+        * choose a export name
+        * choose export type LOST_Dataset
+        * click generate export
+        * download the annotation data
 
 
 ## request_triton_mia_loop
 ### Description
-Request multi image annotations with a for all images of a specified data source.
+Request multi image annotations with model classification proposals for all images of a specified data source.
+This Pipeline runs in a loop.
 
 ### How do I use the pipeline ?
 
@@ -92,16 +125,35 @@ The model is trainable in a loop with the tiny_yolo_triton_sia_loop pipeline.
 1. load Tensorflow model to the model repository
     * It is possible to config specific settings by your own in the config.pbtxt.
 
-2. start and configure the pipeline
+2. Setup and configure the pipeline
     * start the pipeline tiny_yolo_triton_sia
-    * there are two datasources
+
+        ![tiny_yolo_pipeline](Images/tiny_yolo_pipe.png)
+
+    * datasource block: choose your image data directory
         * choose your image data directory in one datasource
         * choose your anno data directory in the other datasource. In this directory has to be an anno data file as json.
-    * at the script block, click on "arguments available" and configure them
+    * script block: click on "arguments available" and configure them
         * valid_imgtypes: These are the supported image types
         * model_name: Enter the name of your model. It is the name of the directory in your model repository, see structure example above.
         * url: Enter the url of the Triton Inference Server
         * port: Enter the port of the Triton Inference Server (at the moment only port 8000 for http request is possible)
+    * annotation task block: [Edit](#options-in-annotaion-task) options
+    * Info
+        * Enter a pipeline name and description
+    * Complete
+        * click on start pipe
+3. Annotate
+    * go to annotation menu
+    * annotate the task
+4. Data export
+    * go to pipelines
+    * open the pipeline
+    * annotation task block:
+        * choose a export name
+        * choose export type LOST_Dataset
+        * click generate export
+        * download the annotation data
 
 ## tiny_yolo_triton_sia_loop
 ### Description
@@ -115,11 +167,29 @@ Supported is **tiny yolo v4 Tensorflow** model.
 1. load Tensorflow model to the model repository
     * It is possible to config specific settings by your own in the config.pbtxt.
 
-2. start and configure the pipeline
+2. Setup and configure the pipeline
     * start the pipeline tiny_yolo_triton_sia_loop
-    * choose your image data directory in datasource
-    * at the script block, click on "arguments available" and configure them
+
+        ![tiny_yolo_pipeline](Images/tiny_yolo_loop_pipe.png)
+
+    * datasource block: choose your image data directory
+    * script block: click on "arguments available" and configure them
         * valid_imgtypes: These are the supported image types
         * model_name: Enter the name of your model. It is the name of the directory in your model repository, see structure example above.
         * url: Enter the url of the Triton Inference Server
         * port: Enter the port of the Triton Inference Server (at the moment only port 8000 for http request is possible)
+        * img_batch: Enter the image batch size per iteration
+    * annotation task block: [Edit](#options-in-annotaion-task) options
+    * Info
+        * Enter a pipeline name and description
+    * Complete
+        * click on start pipe
+3. Annotate
+    * go to annotation menu
+    * annotate the task
+4. Data export
+    * go to pipelines
+    * open the pipeline
+    * Data export block:
+        * download anno_data.parquet
+        * download anno_data.json
