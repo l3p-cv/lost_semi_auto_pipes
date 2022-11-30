@@ -1,0 +1,77 @@
+{
+  "description" : "Request single image annotations for all images of a requested triton inference model in a loop.",
+  "author": "Daniel Gacon",
+  "pipe-schema-version" : 1.0,
+  "elements": [
+    {
+      "peN": 0,
+      "peOut": [1],
+      "datasource": {
+        "name": "image path",
+        "type": "rawFile"
+      }
+    },
+    {
+      "peN": 1,
+      "peOut": [2],
+      "script": {
+        "path": "tiny_yolo_triton_sia_loop.py",
+        "description": "Model from triton server requested bounding boxes with labels."
+      }
+    },
+    {
+      "peN": 2,
+      "peOut": [5],
+      "annoTask": {
+        "name": "Single Image Annotation Task",
+        "type": "sia",
+        "instructions": "Please check and draw bounding boxes for all objects in image.",
+        "configuration": {
+          "tools": {
+              "point": false,
+              "line": false,
+              "polygon": false,
+              "bbox": true,
+              "junk": false
+          },
+          "annos":{
+              "multilabels": false,
+              "actions": {
+                  "draw": true,
+                  "label": true,
+                  "edit": true
+              },
+              "minArea": 250
+          },
+          "img": {
+              "multilabels": false,
+              "actions": {
+                  "label": true
+              }
+          }
+        }
+      }
+    },
+    {
+      "peN": 4,
+      "peOut": null,
+      "loop": {
+        "maxIteration": null,
+        "peJumpId": 1
+      }
+    },
+    {
+      "peN": 5,
+      "peOut": [4, 6],
+      "script": {
+        "path": "export_label_dict.py",
+        "description": "Export the label dict as json file and the anno data as parquet."
+      }
+    },
+    {
+      "peN" : 6,
+      "peOut" : null,
+      "dataExport" : {}
+    }
+  ]
+}

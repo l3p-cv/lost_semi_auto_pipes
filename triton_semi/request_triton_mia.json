@@ -1,0 +1,35 @@
+{
+  "description" : "Request triton server for semi annotate all images of a specified data source.",
+  "author" : "Daniel Gacon",
+  "pipe-schema-version" : 1.0,
+  "elements" : [
+    {
+      "peN" : 0,
+      "peOut" : [1],
+      "datasource" : {
+        "type" : "rawFile"
+      }
+    },
+    {
+      "peN" : 1,
+      "peOut" : [2],
+      "script" : {
+        "path": "request_triton_mia.py",
+        "description": "Request multi image annotations with a Tensorflow model for all images of a specified data source."
+      }
+    },
+    {
+      "peN" : 2,
+      "peOut" : null,
+      "annoTask" : {
+        "name" : "MultiImageAnnoation",
+        "type" : "mia",
+        "instructions" : "Please assign a class label to all presented images.",
+        "configuration": {
+          "type": "imageBased",
+          "showProposedLabel": true
+        }
+      }
+    }
+  ]
+}
