@@ -9,10 +9,6 @@ ARGUMENTS = {'valid_imgtypes' : { 'value': "['.jpg', '.jpeg', '.png', '.bmp']",
                             'help': 'Img types where annotations will be requested for!'},
              'model_name' : { 'value': 'marvel_2',
                             'help': 'name of the model that will be used'},
-             'model_version' : { 'value': '-',
-                            'help': 'Img types where annotations will be requested for!'},
-             'batch_size' : { 'value': '1',
-                            'help': 'Size of an image batch per request! Max is the maximum batch size of the model'},
              'url' : { 'value': '192.168.1.23',
                             'help': 'url of the triton inference server (example: IP of device)'},
              'port' : { 'value': '8000',
@@ -36,10 +32,8 @@ class LostScript(script.Script):
                     filenames.append(path)
                         
         triton_client = classification(self.get_arg('model_name'),
-                                      str(self.get_arg('model_version')),
                                       self.get_arg('url'),
-                                      self.get_arg('port'),
-                                      self.get_arg('batch_size'))
+                                      self.get_arg('port'))
         
         try:
             triton_client.load_model()    

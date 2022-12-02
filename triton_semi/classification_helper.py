@@ -28,29 +28,26 @@ from PIL import Image
 import numpy as np
 import tritonclient.http as httpclient
 from tritonclient.utils import triton_to_np_dtype
+import json
 
 class classification:
     
     #The number of classifications to be requested
-    _REQUEST_CLASSIFIACTION = 1 
+    REQUEST_CLASSIFIACTION = 1 
 
-    def __init__(self, model_name, model_version, url, port, batch_size):
-        self._model_name = model_name
-        if not model_version.isnumeric():
-            self._model_version = ''
-        else:
-            self._model_version = model_version
-        self._url = url
-        self._port = port
-        self._batch_size = batch_size
-        self._connected = False
+    def __init__(self, model_name, url, port):
+        self.model_name = model_name
+        self.url = url
+        self.port = port
+        self.batch_size = 1
+        self.connected = False
         self.prediction = []
         self.img_sim_class = []
-        self._c = 0
-        self._h = 0
-        self._w = 0
+        self.c = 0
+        self.h = 0
+        self.w = 0
         
-    def _parse_model(self, model_metadata, model_config):
+    def parse_model(self, model_metadata, model_config):
         """
         Check the configuration of a model to make sure it meets the
         requirements for an image classification network (as expected by
@@ -68,11 +65,11 @@ class classification:
                 "expecting 1 input in model configuration, got {}".format(
                     len(model_config['input'])))
 
-        self._input_metadata = model_metadata['inputs'][0]
-        self._input_config = model_config['input'][0]
-        self._output_metadata = model_metadata['outputs'][0]
+        self.input_metadata = model_metadata['inputs'][0]
+        self.input_config = model_config['input'][0]
+        self.output_metadata = model_metadata['outputs'][0]
 
-        if self._output_metadata['datatype'] != "FP32":
+        if self.output_metadata['datatype'] != "FP32":
             raise Exception("expecting output datatype to be FP32, model '" +
                             model_metadata['name'] + "' output type is " +
                             self._output_metadata['datatype'])
@@ -83,7 +80,7 @@ class classification:
         # is one.
         output_batch_dim = (model_config['max_batch_size'] > 0)
         non_one_cnt = 0
-        for dim in self._output_metadata['shape']:
+        for dim in self.output_metadata['shape']:
             if output_batch_dim:
                 output_batch_dim = False
             elif dim > 1:
@@ -95,30 +92,30 @@ class classification:
         # the batch dimension)
         input_batch_dim = (model_config['max_batch_size'] > 0)
         expected_input_dims = 3 + (1 if input_batch_dim else 0)
-        if len(self._input_metadata['shape']) != expected_input_dims:
+        if len(self.input_metadata['shape']) != expected_input_dims:
             raise Exception(
                 "expecting input to have {} dimensions, model '{}' input has {}".
                 format(expected_input_dims, model_metadata['name'],
-                        len(self._input_metadata['shape'])))
+                        len(self.input_metadata['shape'])))
 
         #check the dim to choose format eg 3, 128, 128 = CHW
-        max_pos = np.argmax(self._input_config['dims'])
+        max_pos = np.argmax(self.input_config['dims'])
 
         if(max_pos == 0):
-            self._input_config['format'] = 'FORMAT_NHWC'
-            self._h = self._input_metadata['shape'][1 if input_batch_dim else 0]
-            self._w = self._input_metadata['shape'][2 if input_batch_dim else 1]
-            self._c = self._input_metadata['shape'][3 if input_batch_dim else 2]
+            self.input_config['format'] = 'FORMAT_NHWC'
+            self.h = self.input_metadata['shape'][1 if input_batch_dim else 0]
+            self.w = self.input_metadata['shape'][2 if input_batch_dim else 1]
+            self.c = self.input_metadata['shape'][3 if input_batch_dim else 2]
         else:
-            self._input_config['format'] = 'FORMAT_NCHW'
-            self._c = self._input_metadata['shape'][1 if input_batch_dim else 0]
-            self._h = self._input_metadata['shape'][2 if input_batch_dim else 1]
-            self._w = self._input_metadata['shape'][3 if input_batch_dim else 2]
+            self.input_config['format'] = 'FORMAT_NCHW'
+            self.c = self.input_metadata['shape'][1 if input_batch_dim else 0]
+            self.h = self.input_metadata['shape'][2 if input_batch_dim else 1]
+            self.w = self.input_metadata['shape'][3 if input_batch_dim else 2]
 
-        self._supports_batching = model_config['max_batch_size'] > 0
+        self.supports_batching = model_config['max_batch_size'] > 0
 
 
-    def _preprocess(self, img, format, dtype, c, h, w):
+    def preprocess(self, img, format, dtype, c, h, w):
         """
         Pre-process an image to meet the size, type and format
         requirements specified by the parameters.
@@ -148,7 +145,7 @@ class classification:
         # (like BGR) so we just assume RGB.
         return ordered
     
-    def _postprocess(self, responses, output_name, batch_size, supports_batching, output_filenames):
+    def postprocess(self, responses, output_name, batch_size, supports_batching, output_filenames):
         """
         Post-process results to show classifications.
         """
@@ -171,7 +168,7 @@ class classification:
                     self.prediction.append(output_filename)
                     self.img_sim_class.append(cls[1])
           
-    def _request_generator(self, batched_image_data, input_name, output_name, dtype, classes):
+    def request_generator(self, batched_image_data, input_name, output_name, dtype, classes):
 
         # Set the input data
         inputs = [httpclient.InferInput(input_name, batched_image_data.shape, dtype)]
@@ -186,23 +183,48 @@ class classification:
     def load_model(self):
         
         #connect to triton server
-        url = '{}:{}'.format(self._url, self._port)
-        self._triton_client = httpclient.InferenceServerClient(url=url, verbose=False)
+        url = '{}:{}'.format(self.url, self.port)
+        self.triton_client = httpclient.InferenceServerClient(url=url, verbose=False)
         
         try:    
-            self._triton_client.is_server_live()
-            self._connected = True
+            self.triton_client.is_server_live()
+            self.connected = True
         except:
             raise Exception('no conection to server. Check IP and Port')
             
         #load model
-        model_metadata = self._triton_client.get_model_metadata(
-                  model_name=self._model_name, model_version=self._model_version)
+        model_metadata = self.triton_client.get_model_metadata(
+                  model_name=self.model_name)
 
-        model_config = self._triton_client.get_model_config(
-                  model_name=self._model_name)
+        model_config = self.triton_client.get_model_config(
+                  model_name=self.model_name)
 
-        self._parse_model(model_metadata, model_config)
+        self.parse_model(model_metadata, model_config)
+
+    def model_ready(self, version_path, fs_pipe):
+        '''
+        arg:
+            version_path: path with the last used model version (init version is 0)
+            fs_pipe: filesystem of the pipeline (local, cloud...)
+        
+        return: true, if a higher version of the model is available since the loop befor.
+        '''
+        model_stat = self.triton_client.get_inference_statistics(self.model_name)
+        
+        stat_list = model_stat['model_stats']
+        act_version = stat_list[0]['version']
+        
+        with fs_pipe.open(version_path, 'r') as fp:
+                last_version = json.load(fp)
+                 
+        if int(act_version) > int(last_version['version']):
+            with fs_pipe.open(version_path, 'w') as fp:
+                
+                new_model_version_dict = {'version': act_version}
+                json.dump(new_model_version_dict, fp)
+            return True
+        else:
+            return False
   
     def triton_predict(self, filenames):
       
@@ -210,7 +232,7 @@ class classification:
         for filename in filenames:
             img = Image.open(filename)
             image_data.append(
-                self._preprocess(img, self._input_config['format'], self._input_metadata['datatype'], self._c, self._h, self._w))
+                self.preprocess(img, self.input_config['format'], self.input_metadata['datatype'], self.c, self.h, self.w))
 
         # Send requests of batch_size_of_request images. If the number of
         # images isn't an exact multiple of batch_size_of_request then just
@@ -226,32 +248,31 @@ class classification:
             input_filenames = []
             repeated_image_data = []
 
-            for _ in range(self._batch_size):
+            for _ in range(self.batch_size):
                 input_filenames.append(filenames[image_idx])
                 repeated_image_data.append(image_data[image_idx])
                 image_idx = (image_idx + 1) % len(image_data)
                 if image_idx == 0:
                     last_request = True
 
-            if self._supports_batching:
+            if self.supports_batching:
                 batched_image_data = np.stack(repeated_image_data, axis=0)
             else:
                 batched_image_data = repeated_image_data[0]
 
             # Send request
 
-            for inputs, outputs in self._request_generator(
-                        batched_image_data, self._input_metadata['name'], self._output_metadata['name'], self._input_metadata['datatype'], self._REQUEST_CLASSIFIACTION):
+            for inputs, outputs in self.request_generator(
+                        batched_image_data, self.input_metadata['name'], self.output_metadata['name'], self.input_metadata['datatype'], self.REQUEST_CLASSIFIACTION):
                         sent_count += 1
 
                         responses.append(
-                            self._triton_client.infer(self._model_name,
+                            self.triton_client.infer(self.model_name,
                                                 inputs,
                                                 request_id=str(sent_count),
-                                                model_version=self._model_version,
                                                 outputs=outputs))
                         
                         output_filenames.append(input_filenames)
 
-        self._postprocess(responses, self._output_metadata['name'], self._batch_size, self._supports_batching,  output_filenames)
+        self.postprocess(responses, self.output_metadata['name'], self.batch_size, self.supports_batching,  output_filenames)
   
