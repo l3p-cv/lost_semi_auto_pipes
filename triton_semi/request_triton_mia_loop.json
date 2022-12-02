@@ -1,0 +1,57 @@
+{
+  "description" : "Request multi image annotations for all images of a requested triton inference model in a loop.",
+  "author": "Daniel Gacon",
+  "pipe-schema-version" : 1.0,
+  "elements": [
+    {
+      "peN": 0,
+      "peOut": [1],
+      "datasource": {
+        "name": "image path",
+        "type": "rawFile"
+      }
+    },
+    {
+      "peN": 1,
+      "peOut": [2],
+      "script": {
+        "path": "request_triton_mia_loop.py",
+        "description": "Request multi image annotations"
+      }
+    },
+    {
+      "peN" : 2,
+      "peOut" : [5],
+      "annoTask" : {
+        "name" : "MultiImageAnnoation",
+        "type" : "mia",
+        "instructions" : "Please assign a class label to all presented images.",
+        "configuration": {
+          "type": "imageBased",
+          "showProposedLabel": true
+        }
+      }
+    },
+    {
+      "peN": 4,
+      "peOut": null,
+      "loop": {
+        "maxIteration": null,
+        "peJumpId": 1
+      }
+    },
+    {
+      "peN": 5,
+      "peOut": [4, 6],
+      "script": {
+        "path": "export_anno_data.py",
+        "description": "Export the anno data as parquet."
+      }
+    },
+    {
+      "peN" : 6,
+      "peOut" : null,
+      "dataExport" : {}
+    }
+  ]
+}
