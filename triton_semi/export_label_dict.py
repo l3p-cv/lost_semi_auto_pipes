@@ -19,13 +19,13 @@ class LostScript(script.Script):
 
         fs_pipe = self.get_fs()
         
+        loop_itr = self.iteration
+        
         df = self.inp.to_df()
-        
+        df = df[df['img_iteration']==loop_itr]
         ds = lds.LOSTDataset(df)
-        
         ds.remove_empty(inplace=True)
         
-        loop_itr = self.iteration
         
         old_lbl_path = self.get_path(f'labels_loop_{loop_itr - 1}.json', context='pipe')
         new_lbl_path = self.get_path(f'labels_loop_{loop_itr}.json', context='pipe')

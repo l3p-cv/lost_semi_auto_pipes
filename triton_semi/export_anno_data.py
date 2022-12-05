@@ -12,7 +12,7 @@ class LostScript(script.Script):
         fs_pipe = self.get_fs()
         
         df = self.inp.to_df()
-        
+        df = df[df['img_iteration']==loop_itr]
         ds = lds.LOSTDataset(df)
         
         # export anno data as parquet
